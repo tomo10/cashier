@@ -5,7 +5,7 @@ defmodule Cashier.Repo.Migrations.CreateProducts do
     create table(:products) do
       add :sku, :string, null: false
       add :name, :string, null: false
-      add :list_price, :integer, null: false
+      add :list_price, :decimal, null: false
       add :currency, :string, null: false
 
       timestamps()
