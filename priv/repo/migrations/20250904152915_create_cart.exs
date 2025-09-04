@@ -5,7 +5,6 @@ defmodule Cashier.Repo.Migrations.CreateCart do
 
     create table(:carts) do
       add :status, :string, null: false
-      add :expires_at, :utc_datetime
 
       timestamps()
     end

@@ -6,7 +6,6 @@ defmodule Cashier.Cart do
 
   schema "carts" do
     field(:status, Ecto.Enum, values: @status)
-    field(:expires_at, :utc_datetime)
 
     has_many(:cart_items, Cashier.CartItem)
     # belongs_to :user, Cashier.User
