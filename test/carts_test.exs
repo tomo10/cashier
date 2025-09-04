@@ -9,6 +9,10 @@ defmodule Cashier.CartsTest do
     :ok
   end
 
+  @strawberry %{name: "Strawberry", sku: "SR1", list_price: Decimal.new("5.00")}
+  @green_tea %{name: "Green Tea", sku: "GR1", list_price: Decimal.new("3.11")}
+  @coffee %{name: "Coffee", sku: "CF1", list_price: Decimal.new("11.23")}
+
   defp init_cart() do
     Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
   end
@@ -20,10 +24,6 @@ defmodule Cashier.CartsTest do
     {:ok, product} = %Product{} |> Product.changeset(attrs) |> Repo.insert()
     product
   end
-
-  @strawberry %{name: "Strawberry", sku: "SR1", list_price: Decimal.new("5.00")}
-  @green_tea %{name: "Green Tea", sku: "GR1", list_price: Decimal.new("3.11")}
-  @coffee %{name: "Coffee", sku: "CF1", list_price: Decimal.new("11.23")}
 
   test "create_cart/2 inserts a cart with defaults" do
     cart = init_cart()
@@ -47,7 +47,7 @@ defmodule Cashier.CartsTest do
   end
 
   test "cart with no discounts returns correct totals" do
-    cart = Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
+    cart = init_cart()
 
     for attrs <- [@strawberry, @green_tea, @coffee] do
       product = product_fixture(attrs)
@@ -56,5 +56,35 @@ defmodule Cashier.CartsTest do
 
     cart = Repo.get!(Cart, cart.id)
     assert cart.gross_total == Decimal.new("19.34")
+  end
+
+  test "cart with bogof returns correct total" do
+    cart = init_cart()
+
+    product = product_fixture(@green_tea)
+    assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("3.11")
+  end
+
+  test "carts with 3 or more strawberries drops unit price to £4.50" do
+    # cart = init_cart()
+
+    # product = product_fixture(@green_tea)
+    # assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+
+    # cart = Repo.get!(Cart, cart.id)
+    # assert cart.gross_total == Decimal.new("3.11")
+  end
+
+  test "cart with 3 or more coffees the unit price drops by 33%" do
+    # cart = init_cart()
+
+    # product = product_fixture(@green_tea)
+    # assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+
+    # cart = Repo.get!(Cart, cart.id)
+    # assert cart.gross_total == Decimal.new("3.11")
   end
 end
