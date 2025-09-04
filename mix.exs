@@ -32,7 +32,7 @@ defmodule Cashier.MixProject do
 
   defp aliases do
     [
-      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"]
+      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"]
     ]
   end
 end
