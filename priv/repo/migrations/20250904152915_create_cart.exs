@@ -5,6 +5,9 @@ defmodule Cashier.Repo.Migrations.CreateCart do
 
     create table(:carts) do
       add :status, :string, null: false
+      add :gross_total, :decimal, null: false
+      add :discounts, :decimal, null: false
+      add :net_total, :decimal, null: false
 
       timestamps()
     end

@@ -6,9 +6,11 @@ defmodule Cashier.Cart do
 
   schema "carts" do
     field(:status, Ecto.Enum, values: @status)
+    field(:gross_total, :decimal)
+    field(:discounts, :decimal)
+    field(:net_total, :decimal)
 
     has_many(:cart_items, Cashier.CartItem)
-    # belongs_to :user, Cashier.User
 
     timestamps()
   end
@@ -16,7 +18,7 @@ defmodule Cashier.Cart do
   @doc false
   def changeset(product, attrs) do
     product
-    |> cast(attrs, [:status])
-    |> validate_required([:status])
+    |> cast(attrs, [:status, :gross_total, :discounts, :net_total])
+    |> validate_required([:status, :gross_total, :discounts, :net_total])
   end
 end

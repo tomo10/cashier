@@ -47,6 +47,7 @@ defmodule Cashier.Carts do
             quantity: quantity
           }
 
+          # i want the successful insertion of a cart item into the DB to also update the totals of the Cart
           %CartItem{}
           |> CartItem.changeset(attrs)
           |> Repo.insert()
@@ -67,5 +68,9 @@ defmodule Cashier.Carts do
 
   def get_cart_items(cart_id) do
     Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
+  end
+
+  def update_cart_totals(cart) do
+    cart
   end
 end
