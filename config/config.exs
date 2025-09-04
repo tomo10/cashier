@@ -8,3 +8,5 @@ config :cashier, Cashier.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost"
+
+import_config "#{config_env()}.exs"

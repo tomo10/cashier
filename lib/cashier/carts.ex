@@ -8,6 +8,11 @@ defmodule Cashier.Carts do
     Repo.all(Cart)
   end
 
+  # add get cart by idea function.
+  def get_cart_by_id(id) do
+    Repo.get(Cart, id)
+  end
+
   def create_cart(user_id, attrs \\ %{}) do
     attrs = Map.put(attrs, :user_id, user_id)
 
