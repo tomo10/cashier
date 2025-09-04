@@ -9,36 +9,52 @@ defmodule Cashier.CartsTest do
     :ok
   end
 
+  defp init_cart() do
+    Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
+  end
+
+  defp unique_sku(prefix \\ "SKU"), do: "#{prefix}-#{System.unique_integer([:positive])}"
+
+  defp product_fixture(attrs) do
+    attrs = Map.put(attrs, :sku, unique_sku(attrs[:sku] || "SKU"))
+    {:ok, product} = %Product{} |> Product.changeset(attrs) |> Repo.insert()
+    product
+  end
+
+  @strawberry %{name: "Strawberry", sku: "SR1", list_price: Decimal.new("5.00")}
+  @green_tea %{name: "Green Tea", sku: "GR1", list_price: Decimal.new("3.11")}
+  @coffee %{name: "Coffee", sku: "CF1", list_price: Decimal.new("11.23")}
+
   test "create_cart/2 inserts a cart with defaults" do
-    cart = Carts.create_cart(nil, %{status: :open})
+    cart = init_cart()
 
     assert %Cart{id: id, status: :open} = cart
     assert is_integer(id)
 
-    # Fetch from DB to ensure it persisted
     from_db = Repo.get!(Cart, id)
     assert from_db.status == :open
   end
 
   test "add_item_to_cart inserts when not present and increments when present" do
-    cart = Carts.create_cart(nil, %{status: :open})
+    cart = init_cart()
+    product = product_fixture(@green_tea)
 
-    {:ok, product} =
-      %Product{}
-      |> Product.changeset(%{
-        sku: "SKU-1",
-        name: "Widget",
-        list_price: Decimal.new("9.99"),
-        currency: "EUR"
-      })
-      |> Repo.insert()
-
-    # Insert
     assert {:ok, item1} = Carts.add_item_to_cart(cart.id, product.id, 2)
     assert item1.quantity == 2
 
-    # Increment
     assert {:ok, item2} = Carts.add_item_to_cart(cart.id, product.id, 3)
     assert item2.quantity == 5
+  end
+
+  test "cart with no discounts returns correct totals" do
+    cart = Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
+
+    for attrs <- [@strawberry, @green_tea, @coffee] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("19.34")
   end
 end

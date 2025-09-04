@@ -14,7 +14,12 @@ defmodule Cashier.Carts do
   end
 
   def create_cart(user_id, attrs \\ %{}) do
-    attrs = Map.put(attrs, :user_id, user_id)
+    attrs =
+      attrs
+      |> Map.put(:user_id, user_id)
+      |> Map.put_new(:gross_total, Decimal.new("0"))
+      |> Map.put_new(:discounts, Decimal.new("0"))
+      |> Map.put_new(:net_total, Decimal.new("0"))
 
     %Cart{}
     |> Cart.changeset(attrs)
@@ -34,7 +39,7 @@ defmodule Cashier.Carts do
 
   def add_item_to_cart(cart_id, product_id, quantity)
       when is_integer(quantity) and quantity > 0 do
-    with %Cart{} <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
+    with %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
          %Product{} = product <- Repo.get(Product, product_id) || {:error, :product_not_found} do
       case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
         nil ->
@@ -47,17 +52,26 @@ defmodule Cashier.Carts do
             quantity: quantity
           }
 
-          # i want the successful insertion of a cart item into the DB to also update the totals of the Cart
-          %CartItem{}
-          |> CartItem.changeset(attrs)
-          |> Repo.insert()
+          case %CartItem{} |> CartItem.changeset(attrs) |> Repo.insert() do
+            {:ok, item} ->
+              update_cart_totals(cart)
+              {:ok, item}
+
+            error ->
+              error
+          end
 
         %CartItem{} = item ->
           new_quantity = item.quantity + quantity
 
-          item
-          |> Ecto.Changeset.change(%{quantity: new_quantity})
-          |> Repo.update()
+          case item |> Ecto.Changeset.change(%{quantity: new_quantity}) |> Repo.update() do
+            {:ok, item} ->
+              update_cart_totals(cart)
+              {:ok, item}
+
+            error ->
+              error
+          end
       end
     end
   end
@@ -71,6 +85,19 @@ defmodule Cashier.Carts do
   end
 
   def update_cart_totals(cart) do
+    items = get_cart_items(cart.id)
+
+    gross =
+      Enum.reduce(items, Decimal.new("0"), fn item, acc ->
+        line_total = Decimal.mult(item.list_unit_price, Decimal.new(item.quantity))
+        Decimal.add(acc, line_total)
+      end)
+
+    discounts = Decimal.new("0")
+    net = Decimal.sub(gross, discounts)
+
     cart
+    |> Ecto.Changeset.change(%{gross_total: gross, discounts: discounts, net_total: net})
+    |> Repo.update!()
   end
 end
