@@ -6,9 +6,9 @@ defmodule Cashier.Cart do
 
   schema "carts" do
     field(:status, Ecto.Enum, values: @status)
-    field(:gross_total, :decimal)
-    field(:discounts, :decimal)
-    field(:net_total, :decimal)
+    field(:gross_total, :decimal, default: Decimal.new("0"))
+    field(:discounts, :decimal, default: Decimal.new("0"))
+    field(:net_total, :decimal, default: Decimal.new("0"))
 
     has_many(:cart_items, Cashier.CartItem)
 

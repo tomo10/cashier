@@ -6,7 +6,7 @@ defmodule Cashier.Product do
     field(:sku, :string)
     field(:name, :string)
     field(:list_price, :decimal)
-    field(:currency, :string, default: "EUR")
+    field(:currency, :string, default: "GBP")
 
     timestamps()
   end

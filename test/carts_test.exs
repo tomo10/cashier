@@ -68,23 +68,23 @@ defmodule Cashier.CartsTest do
     assert cart.gross_total == Decimal.new("3.11")
   end
 
-  test "carts with 3 or more strawberries drops unit price to £4.50" do
-    # cart = init_cart()
+  # test "carts with 3 or more strawberries drops unit price to £4.50" do
+  #   cart = init_cart()
 
-    # product = product_fixture(@green_tea)
-    # assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+  #   product = product_fixture(@green_tea)
+  #   assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
 
-    # cart = Repo.get!(Cart, cart.id)
-    # assert cart.gross_total == Decimal.new("3.11")
-  end
+  #   cart = Repo.get!(Cart, cart.id)
+  #   assert cart.gross_total == Decimal.new("3.11")
+  # end
 
-  test "cart with 3 or more coffees the unit price drops by 33%" do
-    # cart = init_cart()
+  # test "cart with 3 or more coffees the unit price drops by 33%" do
+  #   cart = init_cart()
 
-    # product = product_fixture(@green_tea)
-    # assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+  #   product = product_fixture(@green_tea)
+  #   assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
 
-    # cart = Repo.get!(Cart, cart.id)
-    # assert cart.gross_total == Decimal.new("3.11")
-  end
+  #   cart = Repo.get!(Cart, cart.id)
+  #   assert cart.gross_total == Decimal.new("3.11")
+  # end
 end

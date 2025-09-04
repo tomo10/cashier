@@ -6,4 +6,7 @@ defmodule Cashier.Specials do
   def bogo(%CartItem{} = item) do
     item
   end
+
+  def calc_line_discounts() do
+  end
 end
