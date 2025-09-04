@@ -66,6 +66,6 @@ defmodule Cashier.Carts do
   end
 
   def get_cart_items(cart_id) do
-    cart_id
+    Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
   end
 end
