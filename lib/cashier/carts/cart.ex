@@ -9,7 +9,7 @@ defmodule Cashier.Cart do
     field(:expires_at, :utc_datetime)
 
     has_many(:cart_items, Cashier.CartItem)
-    # belongs_to :user, Cashier.User   # optional if you model users
+    # belongs_to :user, Cashier.User
 
     timestamps()
   end
