@@ -17,8 +17,6 @@ defmodule Cashier.CartsTest do
     Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
   end
 
-  # defp unique_sku(prefix \\ "SKU"), do: "#{prefix}-#{System.unique_integer([:positive])}"
-
   defp product_fixture(attrs) do
     case Repo.get_by(Product, sku: attrs[:sku]) do
       nil ->
