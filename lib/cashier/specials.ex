@@ -21,13 +21,6 @@ defmodule Cashier.Specials do
 
     dbg(items_by_sku)
 
-    sr1 =
-      with %{qty: q} when q > 2 <- Map.get(items_by_sku, "SR1") do
-        Decimal.mult(q, Decimal.new("0.5"))
-      else
-        _ -> @zero
-      end
-
     gr1 =
       with %{qty: q, price: p} <- Map.get(items_by_sku, "GR1") do
         free = div(q, 2)
@@ -36,6 +29,21 @@ defmodule Cashier.Specials do
         _ -> @zero
       end
 
-    Decimal.add(sr1, gr1)
+    sr1 =
+      with %{qty: q} when q > 2 <- Map.get(items_by_sku, "SR1") do
+        Decimal.mult(q, Decimal.new("0.5"))
+      else
+        _ -> @zero
+      end
+
+    cf1 =
+      with %{qty: q, price: p} when q > 2 <- Map.get(items_by_sku, "CF1") do
+        total = Decimal.mult(Decimal.new(q), p)
+        Decimal.div(total, Decimal.new(3))
+      else
+        _ -> @zero
+      end
+
+    Decimal.add(sr1, gr1) |> Decimal.add(cf1)
   end
 end
