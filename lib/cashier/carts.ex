@@ -102,7 +102,7 @@ defmodule Cashier.Carts do
       end)
 
     discounts =
-      case Specials.calc_line_discounts(items) do
+      case Map.new(items, &{&1.sku, &1}) |> Specials.calc_line_discounts() do
         %Decimal{} = d -> d
         _ -> @zero
       end
