@@ -72,7 +72,23 @@ defmodule Cashier.Carts do
   end
 
   def remove_item_from_cart(cart_id, product_id, quantity) do
-    with :ok <- validate_quantity(quantity) do
+    with :ok <- validate_quantity(quantity),
+         %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found} do
+      case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
+        %CartItem{} = item ->
+          new_quantity = item.quantity - quantity
+
+          with {:ok, item} <-
+                 item
+                 |> Ecto.Changeset.change(%{quantity: new_quantity})
+                 |> Repo.update() do
+            recompute_totals!(cart)
+            {:ok, item}
+          end
+
+        nil ->
+          nil
+      end
     end
   end
 
