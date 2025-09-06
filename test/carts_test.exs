@@ -109,4 +109,28 @@ defmodule Cashier.CartsTest do
     assert cart.gross_total == Decimal.new("44.92")
     assert cart.net_total == Decimal.new("29.95")
   end
+
+  test "cart with multiple discounts with multiple items" do
+    cart = init_cart()
+
+    for attrs <- [
+          @green_tea,
+          @coffee,
+          @strawberry,
+          @coffee,
+          @strawberry,
+          @coffee,
+          @strawberry,
+          @coffee,
+          @green_tea,
+          @green_tea
+        ] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("69.25")
+    assert cart.net_total == Decimal.new("49.67")
+  end
 end
