@@ -50,7 +50,9 @@ defmodule Cashier.CartsTest do
     assert item2.quantity == 5
   end
 
-  test "cart with bogof returns correct total" do
+  # tests specified in document
+
+  test "cart with bogo green tea returns correct total. GR1,GR1" do
     cart = init_cart()
 
     product = product_fixture(@green_tea)
@@ -59,6 +61,44 @@ defmodule Cashier.CartsTest do
     cart = Repo.get!(Cart, cart.id)
     assert cart.net_total == Decimal.new("3.11")
   end
+
+  test "cart with 3 gree teas, 1 cofee and 1 strawberry returns correct total. GR1,SR1,GR1,GR1,CF1" do
+    cart = init_cart()
+
+    for attrs <- [@green_tea, @strawberry, @green_tea, @green_tea, @coffee] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.net_total == Decimal.new("22.45")
+  end
+
+  test "cart with 1 green teas, 3 strawberries returns correct total. SR1,SR1,GR1,SR1" do
+    cart = init_cart()
+
+    for attrs <- [@strawberry, @strawberry, @green_tea, @strawberry] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.net_total == Decimal.new("16.61")
+  end
+
+  test "cart with 1 green teas, 1 strawberry, and 3 coffee returns correct total. GR1,CF1,SR1,CF1,CF1" do
+    cart = init_cart()
+
+    for attrs <- [@green_tea, @coffee, @strawberry, @coffee, @coffee] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.net_total == Decimal.new("30.57")
+  end
+
+  # other broader tests
 
   test "cart with no discounts returns correct totals" do
     cart = init_cart()
