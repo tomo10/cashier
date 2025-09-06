@@ -1,12 +1,6 @@
 defmodule Cashier.Specials do
-  alias Cashier.CartItem
-
   # todo / nice to have -> want this to be some sort of external service where other ppl in company can adjust rules / promotions
   @zero Decimal.new("0")
-
-  def bogo(%CartItem{} = item) do
-    item
-  end
 
   def calc_line_discounts(all_items) do
     items_by_sku =
@@ -18,8 +12,6 @@ defmodule Cashier.Specials do
           fn m -> %{qty: m.qty + cart_item.quantity, price: m.price} end
         )
       end)
-
-    dbg(items_by_sku)
 
     gr1 =
       with %{qty: q, price: p} <- Map.get(items_by_sku, "GR1") do
@@ -44,6 +36,9 @@ defmodule Cashier.Specials do
         _ -> @zero
       end
 
-    Decimal.add(sr1, gr1) |> Decimal.add(cf1)
+    # we round per line. apparently this is retail best practice
+    Enum.reduce([gr1, sr1, cf1], @zero, fn disc, acc ->
+      Decimal.round(disc, 2, :half_up) |> Decimal.add(acc)
+    end)
   end
 end
