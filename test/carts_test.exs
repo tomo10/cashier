@@ -1,5 +1,5 @@
 defmodule Cashier.CartsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Cashier.{Carts, Repo, Cart}
   alias Cashier.Product
@@ -17,12 +17,16 @@ defmodule Cashier.CartsTest do
     Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
   end
 
-  defp unique_sku(prefix \\ "SKU"), do: "#{prefix}-#{System.unique_integer([:positive])}"
+  # defp unique_sku(prefix \\ "SKU"), do: "#{prefix}-#{System.unique_integer([:positive])}"
 
   defp product_fixture(attrs) do
-    attrs = Map.put(attrs, :sku, unique_sku(attrs[:sku] || "SKU"))
-    {:ok, product} = %Product{} |> Product.changeset(attrs) |> Repo.insert()
-    product
+    case Repo.get_by(Product, sku: attrs[:sku]) do
+      nil ->
+        %Product{} |> Product.changeset(attrs) |> Repo.insert!()
+
+      product ->
+        product
+    end
   end
 
   test "create_cart/2 inserts a cart with defaults" do
@@ -46,6 +50,16 @@ defmodule Cashier.CartsTest do
     assert item2.quantity == 5
   end
 
+  test "cart with bogof returns correct total" do
+    cart = init_cart()
+
+    product = product_fixture(@green_tea)
+    assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.net_total == Decimal.new("3.11")
+  end
+
   test "cart with no discounts returns correct totals" do
     cart = init_cart()
 
@@ -55,17 +69,19 @@ defmodule Cashier.CartsTest do
     end
 
     cart = Repo.get!(Cart, cart.id)
-    assert cart.gross_total == Decimal.new("19.34")
+    assert cart.net_total == Decimal.new("19.34")
   end
 
-  test "cart with bogof returns correct total" do
+  test "cart with bogof returns correct total with other items" do
     cart = init_cart()
 
-    product = product_fixture(@green_tea)
-    assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 2)
+    for attrs <- [@strawberry, @green_tea, @coffee, @green_tea] do
+      product = product_fixture(attrs)
+      assert {:ok, _item} = Carts.add_item_to_cart(cart.id, product.id, 1)
+    end
 
     cart = Repo.get!(Cart, cart.id)
-    assert cart.gross_total == Decimal.new("3.11")
+    assert cart.net_total == Decimal.new("19.34")
   end
 
   # test "carts with 3 or more strawberries drops unit price to £4.50" do
