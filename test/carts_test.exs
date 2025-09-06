@@ -133,4 +133,39 @@ defmodule Cashier.CartsTest do
     assert cart.gross_total == Decimal.new("69.25")
     assert cart.net_total == Decimal.new("49.67")
   end
+
+  test "remove_item_from_cart adjusts quantities and totals with correct discounts" do
+    cart = init_cart()
+
+    coffee = product_fixture(@coffee)
+    tea = product_fixture(@green_tea)
+
+    # Initial basket: 3 coffees + 2 teas
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, coffee.id, 3)
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, tea.id, 2)
+
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("39.91")
+    assert cart.net_total == Decimal.new("25.57")
+
+    # Remove 1 coffee: quantity 2 -> coffee discount lost, net stays the same
+    assert {:ok, _} = Carts.remove_item_from_cart(cart.id, coffee.id, 1)
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("28.68")
+    assert cart.net_total == Decimal.new("25.57")
+
+    # Remove 1 tea. Cart is 1 tea and 2 coffees. Net and gross should be the same.
+    assert {:ok, _} = Carts.remove_item_from_cart(cart.id, tea.id, 1)
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("25.57")
+    assert cart.net_total == Decimal.new("25.57")
+
+    # Remove the remaining coffees. We may want to guard negative quanity inputs somehow
+    assert {:ok, _} = Carts.remove_item_from_cart(cart.id, coffee.id, 2)
+    cart = Repo.get!(Cart, cart.id)
+
+    # Only 1 tea remains. No discounts.
+    assert cart.gross_total == Decimal.new("3.11")
+    assert cart.net_total == Decimal.new("3.11")
+  end
 end
