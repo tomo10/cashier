@@ -102,7 +102,7 @@ defmodule Cashier.Carts do
       end)
 
     discounts =
-      case Enum.group_by(items, & &1.sku) |> Specials.calc_line_discounts() do
+      case Specials.calc_line_discounts(items) do
         %Decimal{} = d -> d
         _ -> @zero
       end
