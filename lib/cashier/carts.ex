@@ -23,6 +23,9 @@ defmodule Cashier.Carts do
     |> Repo.insert!()
   end
 
+  defp validate_quantity(q) when is_integer(q) and q > 0, do: :ok
+  defp validate_quantity(_), do: {:error, :invalid_quantity}
+
   @doc """
   Add a product to a cart.
 
@@ -34,9 +37,9 @@ defmodule Cashier.Carts do
   """
   def add_item_to_cart(cart_id, product_id, quantity \\ 1)
 
-  def add_item_to_cart(cart_id, product_id, quantity)
-      when is_integer(quantity) and quantity > 0 do
-    with %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
+  def add_item_to_cart(cart_id, product_id, quantity) do
+    with :ok <- validate_quantity(quantity),
+         %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
          %Product{} = product <- Repo.get(Product, product_id) || {:error, :product_not_found} do
       case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
         nil ->
@@ -49,32 +52,28 @@ defmodule Cashier.Carts do
             quantity: quantity
           }
 
-          case %CartItem{} |> CartItem.changeset(attrs) |> Repo.insert() do
-            {:ok, item} ->
-              recompute_totals!(cart)
-              {:ok, item}
-
-            error ->
-              error
+          with {:ok, item} <- %CartItem{} |> CartItem.changeset(attrs) |> Repo.insert() do
+            recompute_totals!(cart)
+            {:ok, item}
           end
 
         %CartItem{} = item ->
           new_quantity = item.quantity + quantity
 
-          case item |> Ecto.Changeset.change(%{quantity: new_quantity}) |> Repo.update() do
-            {:ok, item} ->
-              recompute_totals!(cart)
-              {:ok, item}
-
-            error ->
-              error
+          with {:ok, item} <-
+                 item
+                 |> Ecto.Changeset.change(%{quantity: new_quantity})
+                 |> Repo.update() do
+            recompute_totals!(cart)
+            {:ok, item}
           end
       end
     end
   end
 
-  def add_item_to_cart(_cart_id, _product_id, quantity) when is_integer(quantity) do
-    {:error, :invalid_quantity}
+  def remove_item_from_cart(cart_id, product_id, quantity) do
+    with :ok <- validate_quantity(quantity) do
+    end
   end
 
   def get_cart_items_grouped_by_sku(cart_id) do
