@@ -160,12 +160,52 @@ defmodule Cashier.CartsTest do
     assert cart.gross_total == Decimal.new("25.57")
     assert cart.net_total == Decimal.new("25.57")
 
-    # Remove the remaining coffees. We may want to guard negative quanity inputs somehow
-    assert {:ok, _} = Carts.remove_item_from_cart(cart.id, coffee.id, 2)
+    # Remove the remaining coffees (deletes coffee line)
+    assert {:ok, :removed} = Carts.remove_item_from_cart(cart.id, coffee.id, 2)
     cart = Repo.get!(Cart, cart.id)
 
     # Only 1 tea remains. No discounts.
     assert cart.gross_total == Decimal.new("3.11")
     assert cart.net_total == Decimal.new("3.11")
+  end
+
+  test "add discounts, drop below discounts threshhold, then re-add to ensure no asymmetry" do
+    cart = init_cart()
+    coffee = product_fixture(@coffee)
+
+    # Add 3 coffees -> discount applies
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, coffee.id, 3)
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("33.69")
+    assert cart.net_total == Decimal.new("22.46")
+
+    # Remove 1 coffee -> discount removed (2 coffees * 11.23)
+    assert {:ok, _} = Carts.remove_item_from_cart(cart.id, coffee.id, 1)
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("22.46")
+    assert cart.net_total == Decimal.new("22.46")
+
+    # Add 1 coffee -> back to 3, discount should re-apply
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, coffee.id, 1)
+    cart = Repo.get!(Cart, cart.id)
+    assert cart.gross_total == Decimal.new("33.69")
+    assert cart.net_total == Decimal.new("22.46")
+  end
+
+  test "remove larger quantity than exists in the cart returns error and leaves totals unchanged" do
+    cart = init_cart()
+    coffee = product_fixture(@coffee)
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, coffee.id, 2)
+
+    cart_before = Repo.get!(Cart, cart.id)
+    assert cart_before.gross_total == Decimal.new("22.46")
+    assert cart_before.net_total == Decimal.new("22.46")
+
+    assert {:error, :insufficient_quantity} = Carts.remove_item_from_cart(cart.id, coffee.id, 3)
+
+    # Totals unchanged after unsuccessful removal
+    cart_after = Repo.get!(Cart, cart.id)
+    assert cart_after.gross_total == Decimal.new("22.46")
+    assert cart_after.net_total == Decimal.new("22.46")
   end
 end

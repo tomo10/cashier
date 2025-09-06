@@ -2,10 +2,7 @@ defmodule Cashier.Carts do
   import Ecto.Query, warn: false
   alias Cashier.Repo
 
-  alias Cashier.Cart
-  alias Cashier.Carts
-  alias Cashier.{CartItem, Product}
-  alias Cashier.Specials
+  alias Cashier.{CartItem, Product, Cart, Specials}
 
   def get_all_carts() do
     Repo.all(Cart)
@@ -26,15 +23,6 @@ defmodule Cashier.Carts do
   defp validate_quantity(q) when is_integer(q) and q > 0, do: :ok
   defp validate_quantity(_), do: {:error, :invalid_quantity}
 
-  @doc """
-  Add a product to a cart.
-
-  - If the product is not yet in the cart, inserts a new CartItem with the
-    product's sku, name, and list price, setting the given quantity (default 1).
-  - If it already exists, increment the quantitty.
-
-  Returns {:ok, %CartItem{}} or {:error, reason}.
-  """
   def add_item_to_cart(cart_id, product_id, quantity \\ 1)
 
   def add_item_to_cart(cart_id, product_id, quantity) do
@@ -78,25 +66,29 @@ defmodule Cashier.Carts do
         %CartItem{} = item ->
           new_quantity = item.quantity - quantity
 
-          with {:ok, item} <-
-                 item
-                 |> Ecto.Changeset.change(%{quantity: new_quantity})
-                 |> Repo.update() do
-            recompute_totals!(cart)
-            {:ok, item}
+          cond do
+            new_quantity < 0 ->
+              {:error, :insufficient_quantity}
+
+            new_quantity == 0 ->
+              {:ok, _} = Repo.delete(item)
+              recompute_totals!(cart)
+              {:ok, :removed}
+
+            true ->
+              with {:ok, item} <-
+                     item
+                     |> Ecto.Changeset.change(%{quantity: new_quantity})
+                     |> Repo.update() do
+                recompute_totals!(cart)
+                {:ok, item}
+              end
           end
 
         nil ->
-          nil
+          {:error, :item_not_found}
       end
     end
-  end
-
-  def get_cart_items_grouped_by_sku(cart_id) do
-    CartItem
-    |> where([ci], ci.cart_id == ^cart_id)
-    |> Repo.all()
-    |> Enum.group_by(& &1.sku)
   end
 
   @zero Decimal.new("0")
