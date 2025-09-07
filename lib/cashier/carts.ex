@@ -28,69 +28,77 @@ defmodule Cashier.Carts do
   def add_item_to_cart(cart_id, product_id, quantity \\ 1)
 
   def add_item_to_cart(cart_id, product_id, quantity) do
-    with :ok <- validate_quantity(quantity),
-         %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
-         %Product{} = product <- Repo.get(Product, product_id) || {:error, :product_not_found} do
-      case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
-        nil ->
-          attrs = %{
-            cart_id: cart_id,
-            product_id: product_id,
-            sku: product.sku,
-            name: product.name,
-            list_unit_price: product.list_price,
-            quantity: quantity
-          }
+    Repo.transaction(fn ->
+      with :ok <- validate_quantity(quantity),
+           %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
+           %Product{} = product <- Repo.get(Product, product_id) || {:error, :product_not_found} do
+        case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
+          nil ->
+            attrs = %{
+              cart_id: cart_id,
+              product_id: product_id,
+              sku: product.sku,
+              name: product.name,
+              list_unit_price: product.list_price,
+              quantity: quantity
+            }
 
-          with {:ok, item} <- %CartItem{} |> CartItem.changeset(attrs) |> Repo.insert() do
-            recompute_totals!(cart)
-            {:ok, item}
-          end
+            with {:ok, item} <- %CartItem{} |> CartItem.changeset(attrs) |> Repo.insert() do
+              recompute_totals!(cart)
+              item
+            end
 
-        %CartItem{} = item ->
-          new_quantity = item.quantity + quantity
+          %CartItem{} = item ->
+            new_quantity = item.quantity + quantity
 
-          with {:ok, item} <-
-                 item
-                 |> Ecto.Changeset.change(%{quantity: new_quantity})
-                 |> Repo.update() do
-            recompute_totals!(cart)
-            {:ok, item}
-          end
+            with {:ok, item} <-
+                   item
+                   |> Ecto.Changeset.change(%{quantity: new_quantity})
+                   |> Repo.update() do
+              recompute_totals!(cart)
+              item
+            end
+        end
+      else
+        {:error, _} = err -> Repo.rollback(err)
       end
-    end
+    end)
   end
 
   def remove_item_from_cart(cart_id, product_id, quantity) do
-    with :ok <- validate_quantity(quantity),
-         %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found} do
-      case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
-        %CartItem{} = item ->
-          new_quantity = item.quantity - quantity
+    Repo.transaction(fn ->
+      with :ok <- validate_quantity(quantity),
+           %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found} do
+        case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
+          %CartItem{} = item ->
+            new_quantity = item.quantity - quantity
 
-          cond do
-            new_quantity < 0 ->
-              {:error, :insufficient_quantity}
+            cond do
+              new_quantity < 0 ->
+                {:error, :insufficient_quantity}
 
-            new_quantity == 0 ->
-              {:ok, _} = Repo.delete(item)
-              recompute_totals!(cart)
-              {:ok, :removed}
-
-            true ->
-              with {:ok, item} <-
-                     item
-                     |> Ecto.Changeset.change(%{quantity: new_quantity})
-                     |> Repo.update() do
+              new_quantity == 0 ->
+                {:ok, _} = Repo.delete(item)
                 recompute_totals!(cart)
-                {:ok, item}
-              end
-          end
+                :removed
 
-        nil ->
-          {:error, :item_not_found}
+              true ->
+                with {:ok, item} <-
+                       item
+                       |> Ecto.Changeset.change(%{quantity: new_quantity})
+                       |> Repo.update() do
+                  recompute_totals!(cart)
+                  item
+                end
+            end
+
+          nil ->
+            {:error, :item_not_found}
+        end
+      else
+        {:error, reason} -> Repo.rollback(reason)
       end
-    end
+    end)
   end
 
   @zero Decimal.new("0")
