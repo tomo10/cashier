@@ -99,7 +99,7 @@ defmodule Cashier.Carts do
 
   @zero Decimal.new("0")
 
-  def recompute_totals!(%Cart{id: cart_id} = cart) do
+  defp recompute_totals!(%Cart{id: cart_id} = cart) do
     items = CI.get_items_by_cart(cart_id)
 
     gross_total =
@@ -107,11 +107,7 @@ defmodule Cashier.Carts do
         Decimal.add(acc, Decimal.mult(item.list_unit_price, Decimal.new(item.quantity)))
       end)
 
-    discounts =
-      case Map.new(items, &{&1.sku, &1}) |> Specials.calc_line_discounts() do
-        %Decimal{} = d -> d
-        _ -> @zero
-      end
+    discounts = Map.new(items, &{&1.sku, &1}) |> Specials.calc_line_discounts()
 
     net_total = Decimal.sub(gross_total, discounts)
 
