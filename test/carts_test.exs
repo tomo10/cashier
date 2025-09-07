@@ -246,4 +246,34 @@ defmodule Cashier.CartsTest do
     assert cart_after.gross_total == Decimal.new("22.46")
     assert cart_after.net_total == Decimal.new("22.46")
   end
+
+  # test error states
+
+  test "remove_item_from_cart returns error when cart not found" do
+    coffee = product_fixture(@coffee)
+    assert {:error, :cart_not_found} = Carts.remove_item_from_cart(-1, coffee.id, 1)
+  end
+
+  test "remove_item_from_cart returns error when item not found in existing cart" do
+    cart = init_cart()
+    coffee = product_fixture(@coffee)
+    cart_before = Repo.get!(Cart, cart.id)
+    assert {:error, :item_not_found} = Carts.remove_item_from_cart(cart.id, coffee.id, 1)
+
+    cart_after = Repo.get!(Cart, cart.id)
+    assert cart_after.gross_total == cart_before.gross_total
+    assert cart_after.net_total == cart_before.net_total
+  end
+
+  test "remove_item_from_cart invalid quantity (zero) returns error and leaves totals" do
+    cart = init_cart()
+    coffee = product_fixture(@coffee)
+    assert {:ok, _} = Carts.add_item_to_cart(cart.id, coffee.id, 1)
+    cart_before = Repo.get!(Cart, cart.id)
+    assert {:error, :invalid_quantity} = Carts.remove_item_from_cart(cart.id, coffee.id, 0)
+
+    cart_after = Repo.get!(Cart, cart.id)
+    assert cart_after.gross_total == cart_before.gross_total
+    assert cart_after.net_total == cart_before.net_total
+  end
 end
