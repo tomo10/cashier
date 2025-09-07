@@ -5,7 +5,7 @@ cf9 = Repo.insert!(%Product{sku: "SR9", name: "Strawberries", list_price: Decima
 sr9 = Repo.insert!(%Product{sku: "CF9", name: "Coffee", list_price: Decimal.new("11.23")})
 
 # Create a sample cart and add a couple of items
-cart = Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
+cart = Carts.create_cart(%{status: :open, gross_total: 0, discounts: 0, net_total: 0})
 
 # Add items
 {:ok, _} = Carts.add_item_to_cart(cart.id, gr9.id, 2)

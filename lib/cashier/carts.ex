@@ -12,12 +12,14 @@ defmodule Cashier.Carts do
     Repo.get(Cart, id)
   end
 
-  def create_cart(user_id, attrs \\ %{}) do
-    attrs = Map.put(attrs, :user_id, user_id)
-
+  def create_cart(attrs \\ %{}) do
     %Cart{}
     |> Cart.changeset(attrs)
     |> Repo.insert!()
+  end
+
+  def get_items_by_cart(cart_id) do
+    Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
   end
 
   defp validate_quantity(q) when is_integer(q) and q > 0, do: :ok
@@ -94,7 +96,7 @@ defmodule Cashier.Carts do
   @zero Decimal.new("0")
 
   def recompute_totals!(%Cart{id: cart_id} = cart) do
-    items = Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
+    items = get_items_by_cart(cart_id)
 
     gross_total =
       Enum.reduce(items, @zero, fn item, acc ->

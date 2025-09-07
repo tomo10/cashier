@@ -13,5 +13,10 @@ defmodule Cashier.Repo.Migrations.CreateCartItem do
 
       timestamps()
     end
+
+    create index(:cart_items, [:cart_id])
+    create unique_index(:cart_items, [:cart_id, :product_id],
+      name: :cart_items_cart_id_product_id_index
+    )
   end
 end

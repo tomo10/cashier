@@ -14,7 +14,7 @@ defmodule Cashier.CartsTest do
   @coffee %{name: "Coffee", sku: "CF1", list_price: Decimal.new("11.23")}
 
   defp init_cart() do
-    Carts.create_cart(nil, %{status: :open, gross_total: 0, discounts: 0, net_total: 0})
+    Carts.create_cart(%{status: :open, gross_total: 0, discounts: 0, net_total: 0})
   end
 
   defp product_fixture(attrs) do
