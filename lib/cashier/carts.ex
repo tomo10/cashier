@@ -3,23 +3,24 @@ defmodule Cashier.Carts do
   alias Cashier.Repo
 
   alias Cashier.{CartItem, Product, Cart, Specials}
+  alias Cashier.Products
+  alias Cashier.CartItems, as: CI
 
   def get_all_carts() do
     Repo.all(Cart)
   end
 
   def get_cart_by_id(id) do
-    Repo.get(Cart, id)
+    case Repo.get(Cart, id) do
+      %Cart{} = cart -> cart
+      nil -> {:error, :cart_not_found}
+    end
   end
 
   def create_cart(attrs \\ %{}) do
     %Cart{}
     |> Cart.changeset(attrs)
     |> Repo.insert!()
-  end
-
-  def get_items_by_cart(cart_id) do
-    Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
   end
 
   defp validate_quantity(q) when is_integer(q) and q > 0, do: :ok
@@ -30,8 +31,8 @@ defmodule Cashier.Carts do
   def add_item_to_cart(cart_id, product_id, quantity) do
     Repo.transaction(fn ->
       with :ok <- validate_quantity(quantity),
-           %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found},
-           %Product{} = product <- Repo.get(Product, product_id) || {:error, :product_not_found} do
+           %Cart{} = cart <- get_cart_by_id(cart_id),
+           %Product{} = product <- Products.get_product_by_id(product_id) do
         case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
           nil ->
             attrs = %{
@@ -60,7 +61,7 @@ defmodule Cashier.Carts do
             end
         end
       else
-        {:error, _} = err -> Repo.rollback(err)
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
@@ -68,32 +69,27 @@ defmodule Cashier.Carts do
   def remove_item_from_cart(cart_id, product_id, quantity) do
     Repo.transaction(fn ->
       with :ok <- validate_quantity(quantity),
-           %Cart{} = cart <- Repo.get(Cart, cart_id) || {:error, :cart_not_found} do
-        case Repo.get_by(CartItem, cart_id: cart_id, product_id: product_id) do
-          %CartItem{} = item ->
-            new_quantity = item.quantity - quantity
+           %Cart{} = cart <- get_cart_by_id(cart_id),
+           %CartItem{} = item <- CI.get_item_by_cart_product_ids(cart_id, product_id) do
+        new_quantity = item.quantity - quantity
 
-            cond do
-              new_quantity < 0 ->
-                {:error, :insufficient_quantity}
+        cond do
+          new_quantity < 0 ->
+            Repo.rollback(:insufficient_quantity)
 
-              new_quantity == 0 ->
-                {:ok, _} = Repo.delete(item)
-                recompute_totals!(cart)
-                :removed
+          new_quantity == 0 ->
+            {:ok, _} = Repo.delete(item)
+            recompute_totals!(cart)
+            :removed
 
-              true ->
-                with {:ok, item} <-
-                       item
-                       |> Ecto.Changeset.change(%{quantity: new_quantity})
-                       |> Repo.update() do
-                  recompute_totals!(cart)
-                  item
-                end
-            end
+          true ->
+            {:ok, item} =
+              item
+              |> Ecto.Changeset.change(%{quantity: new_quantity})
+              |> Repo.update()
 
-          nil ->
-            {:error, :item_not_found}
+            recompute_totals!(cart)
+            item
         end
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -104,7 +100,7 @@ defmodule Cashier.Carts do
   @zero Decimal.new("0")
 
   def recompute_totals!(%Cart{id: cart_id} = cart) do
-    items = get_items_by_cart(cart_id)
+    items = CI.get_items_by_cart(cart_id)
 
     gross_total =
       Enum.reduce(items, @zero, fn item, acc ->
