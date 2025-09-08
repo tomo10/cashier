@@ -1,4 +1,18 @@
 defmodule Cashier.Specials do
+  @moduledoc """
+  Pricing rules engine for cart discounts.
+
+  Exposed API:
+    calc_line_discounts/1 -> total Decimal discount given a map %{sku => %CartItem{}}
+
+  Current rules:
+    GR1: Buy-one-get-one-free (every 2nd free)
+    SR1: 3+ strawberries -> price drops to £4.50 each
+    CF1: 3+ coffees -> each at 2/3 original price
+
+  Add new rules by appending a function to @rules that returns a Decimal discount.
+  """
+
   alias Cashier.CartItem
   @zero Decimal.new("0")
 

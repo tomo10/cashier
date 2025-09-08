@@ -1,10 +1,17 @@
 defmodule Cashier.Carts do
+  @moduledoc """
+  Domain operations for shopping carts: creating carts, listing items,
+  and adding/removing products while keeping monetary totals and promotions consistent.
+  """
+
   import Ecto.Query, warn: false
   alias Cashier.Repo
 
   alias Cashier.{CartItem, Product, Cart, Specials}
   alias Cashier.Products
   alias Cashier.CartItems, as: CI
+
+  @zero Decimal.new("0")
 
   def get_all_carts() do
     Repo.all(Cart)
@@ -26,6 +33,15 @@ defmodule Cashier.Carts do
   defp validate_quantity(q) when is_integer(q) and q > 0, do: :ok
   defp validate_quantity(_), do: {:error, :invalid_quantity}
 
+  @doc """
+  Add (or increment) a product in a cart via CartItem model.
+
+  Return shape:
+    {:ok, %CartItem{}}
+    {:error, reason}
+
+  Valid error reasons: :invalid_quantity | :cart_not_found | :product_not_found
+  """
   def add_item_to_cart(cart_id, product_id, quantity \\ 1)
 
   def add_item_to_cart(cart_id, product_id, quantity) do
@@ -66,6 +82,18 @@ defmodule Cashier.Carts do
     end)
   end
 
+  @doc """
+  Remove (decrement) a product line in a cart.
+
+  Returns:
+    {:ok, %CartItem{}}  when the line still has quantity > 0 after removal
+    {:ok, :removed}     when the line item quantity is zero it is deleted
+    {:error, reason}
+
+  Valid error reasons: :invalid_quantity | :cart_not_found | :item_not_found | :insufficient_quantity | %Ecto.Changeset{}
+
+  Recomputes cart totals on every successful change.
+  """
   def remove_item_from_cart(cart_id, product_id, quantity) do
     Repo.transaction(fn ->
       with :ok <- validate_quantity(quantity),
@@ -97,8 +125,6 @@ defmodule Cashier.Carts do
     end)
   end
 
-  @zero Decimal.new("0")
-
   defp recompute_totals!(%Cart{id: cart_id} = cart) do
     items = CI.get_items_by_cart(cart_id)
 
@@ -113,8 +139,9 @@ defmodule Cashier.Carts do
 
     totals = %{gross_total: gross_total, discounts: discounts, net_total: net_total}
 
-    cart
-    |> Ecto.Changeset.change(totals)
-    |> Repo.update!()
+    %Cart{} =
+      cart
+      |> Ecto.Changeset.change(totals)
+      |> Repo.update!()
   end
 end
