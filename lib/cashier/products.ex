@@ -1,4 +1,7 @@
 defmodule Cashier.Products do
+  @moduledoc """
+  Domain operations for products.
+  """
   import Ecto.Query, warn: false
   alias Cashier.Repo
 
