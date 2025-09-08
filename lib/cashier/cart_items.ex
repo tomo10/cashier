@@ -5,10 +5,10 @@ defmodule Cashier.CartItems do
   import Ecto.Query, warn: false
   alias Cashier.Repo
 
-  alias Cashier.CartItem
+  alias Cashier.{CartItem, Cart}
 
-  def get_items_by_cart(cart_id) do
-    Repo.all(from(ci in CartItem, where: ci.cart_id == ^cart_id))
+  def get_items_by_cart(%Cart{id: id}) do
+    Repo.all(from(ci in CartItem, where: ci.cart_id == ^id))
   end
 
   def get_item_by_cart_product_ids(cart_id, product_id) do

@@ -51,11 +51,14 @@ cart = Carts.get_all_carts() |> hd()
 # Inspect updated cart totals
 Carts.get_cart_by_id(cart.id)
 
+# get an product by SKU / product code
+coffee = Products.get_product_by_id(3)
+
 # Remove items
 Carts.remove_item_from_cart(cart.id, coffee.id, 1)
 
 # View items
-CartsItem.get_items_by_cart(cart.id)
+CartsItem.get_items_by_cart(cart)
 ```
 
 ## Running Tests
@@ -67,7 +70,7 @@ mix test
 ## Design Notes
 
 - Totals recalculation: A single `recompute_totals!/1` function queries current `cart_items`, aggregates gross (Σ quantity × list_unit_price), calculates promotional discounts, and persists `gross_total`, `discounts`, `net_total` in one DB write.
-- Promotions live in `Specials` and are SKU‑driven, making the rule engine easily extendable.
+- Promotions live in `Specials` and are SKU‑driven, making the rule engine easily extendable. I used SKU as an alternative to product code but they are the same thing. I wanted a shorter name that made sense in this domain.
 - All cart mutations run inside `Repo.transaction/1` with `Repo.rollback/1` used to surface domain error tuples cleanly.
 - Money is represented with `Decimal`.
 

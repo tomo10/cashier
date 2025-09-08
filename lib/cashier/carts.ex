@@ -125,8 +125,8 @@ defmodule Cashier.Carts do
     end)
   end
 
-  defp recompute_totals!(%Cart{id: cart_id} = cart) do
-    items = CI.get_items_by_cart(cart_id)
+  defp recompute_totals!(%Cart{} = cart) do
+    items = CI.get_items_by_cart(cart)
 
     gross_total =
       Enum.reduce(items, @zero, fn item, acc ->
