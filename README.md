@@ -1,6 +1,6 @@
 # Cashier
 
-An example Elixir/Ecto domain for a point‑of‑sale style shopping cart that applies promotional pricing rules (BOGOF, bulk quantity discounts) while maintaining accurate monetary totals in the database.
+Elixir application for a supermarket cashier that applies promotional pricing rules (BOGOF, bulk quantity discounts) while maintaining accurate monetary totals in the database.
 
 ## What It Does
 
@@ -32,7 +32,7 @@ mix ecto.create
 mix ecto.migrate
 mix run priv/repo/seeds.exs
 
-or if you prefer a single command:
+# or if you prefer a single command:
 mix ecto.reset
 ```
 
